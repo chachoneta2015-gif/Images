@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>OpenRouter Studio</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0e0f13">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="OR Studio">
+<style>
+:root{--bg:#0e0f13;--card:#171921;--line:#272a36;--tx:#e8e9ee;--mut:#8b8fa3;--ac:#7c5cff;--ok:#2ecc8f;--err:#ff5c6c}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 -apple-system,Segoe UI,Roboto,sans-serif}
+header{display:flex;gap:12px;align-items:center;padding:12px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+header h1{font-size:16px;margin:0 12px 0 0}
+input,select,textarea,button{font:inherit;color:var(--tx);background:#10121a;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+textarea{width:100%;min-height:90px;resize:vertical}
+button{cursor:pointer;background:var(--ac);border-color:var(--ac);font-weight:600}
+button.sec{background:#10121a;border-color:var(--line);font-weight:400}
+button:disabled,select:disabled{opacity:.5;cursor:default}
+#key{width:300px}
+nav{display:flex;gap:4px;padding:0 20px;border-bottom:1px solid var(--line)}
+nav button{background:none;border:0;border-bottom:2px solid transparent;border-radius:0;color:var(--mut);padding:12px 16px}
+nav button.on{color:var(--tx);border-color:var(--ac)}
+main{display:grid;grid-template-columns:420px 1fr;gap:20px;padding:20px;max-width:1400px;margin:auto}
+@media(max-width:900px){main{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){
+  input,select,textarea{font-size:16px} /* stops iOS Safari zooming in when a field is tapped */
+  header{padding:10px 14px;gap:8px}
+  #key{flex:1 1 100%;width:auto;min-width:0}
+  nav{overflow-x:auto;padding:0 6px;scrollbar-width:none}
+  nav::-webkit-scrollbar{display:none}
+  nav button{padding:12px 10px;white-space:nowrap}
+  main{padding:12px;gap:12px}
+  .out{grid-template-columns:minmax(0,1fr)}
+}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+label{display:block;color:var(--mut);font-size:12px;margin:12px 0 4px}
+.row{display:flex;gap:8px}.row>*{flex:1;min-width:0}
+.row>div>input,.row>div>select{width:100%}
+.row>button.sec{flex:0 0 auto!important}
+input[type=file]{max-width:100%}
+.pane{display:none}.pane.on{display:block}
+.out{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;align-content:start}
+.item{position:relative;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.item .close{position:absolute;top:8px;right:10px;cursor:pointer;color:var(--mut);font-size:18px;line-height:1}
+.item .close:hover{color:var(--err)}
+.item video,.item img,.item audio{width:100%;border-radius:8px;display:block}
+.meta{color:var(--mut);font-size:12px;margin-top:8px;word-break:break-word}
+.st{font-weight:600;padding-right:22px}.st.ok{color:var(--ok)}.st.err{color:var(--err)}
+.hint{color:var(--mut);font-size:12px;margin-top:4px}
+.est-hit{color:var(--tx);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{background:#10121a;border:1px solid var(--line);border-radius:99px;padding:2px 10px;font-size:12px}
+.chip b{cursor:pointer;margin-left:6px;color:var(--err)}
+a{color:#9d86ff}
+.links{margin-top:6px;display:flex;gap:12px;flex-wrap:wrap}
+.thumbs{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.thumb{position:relative;width:78px}
+.thumb img{width:78px;height:78px;object-fit:cover;border-radius:8px;border:1px solid var(--line);display:block}
+.thumb .tag{display:block;text-align:center;background:var(--ac);border-radius:6px;font-size:12px;margin-top:3px;cursor:pointer;padding:1px 0}
+.thumb .x{position:absolute;top:2px;right:4px;cursor:pointer;color:#fff;background:#000a;border-radius:99px;width:18px;height:18px;text-align:center;line-height:17px;font-size:13px}
+.tools{display:flex;gap:6px;align-items:center;margin:8px 0}
+.tools input[type=range]{flex:1;padding:0}
+.canvas-box{position:relative;width:100%;border:1px solid var(--line);border-radius:8px;overflow:hidden;line-height:0;background:#000}
+.canvas-box canvas{width:100%;height:auto;display:block}
+#e-paint{position:absolute;inset:0;opacity:.55;touch-action:none;cursor:crosshair}
+.acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.acts button{font-size:12px;padding:4px 8px}
+</style>
+</head>
+<body>
+<header>
+  <h1>OpenRouter Studio</h1>
+  <input id="key" type="password" placeholder="OpenRouter API key (sk-or-...)" autocomplete="off">
+  <label style="margin:0;display:flex;gap:6px;align-items:center"><input type="checkbox" id="remember" style="width:auto"> remember</label>
+  <button class="sec" id="connect">Connect</button>
+  <span id="credits" class="hint"></span>
+</header>
+<nav id="tabs">
+  <button data-t="video" class="on">Video</button>
+  <button data-t="image">Image</button>
+  <button data-t="audio">Audio (TTS)</button>
+  <button data-t="chat">Chat</button>
+</nav>
+<main>
+<section>
+  <div class="card">
+    <label style="margin-top:0">Model</label>
+    <div class="row"><select id="model"></select></div>
+    <input id="modelCustom" placeholder="…or type a model slug" style="width:100%;margin-top:6px">
+    <div class="hint" id="modelInfo"></div>
+
+    <!-- VIDEO -->
+    <div class="pane on" id="p-video">
+      <label>Prompt</label><textarea id="v-prompt" placeholder="A paper boat drifting down a rain-slicked gutter at night, neon reflections, slow tracking shot. Audio: rain, distant traffic."></textarea>
+      <div class="row">
+        <div><label>Duration (s)</label><select id="v-dur"></select></div>
+        <div><label>Resolution</label><select id="v-res"></select></div>
+        <div><label>Aspect</label><select id="v-ar"></select></div>
+      </div>
+      <div class="row">
+        <div><label>Seed (optional)</label><input id="v-seed" type="number"></div>
+        <div><label>Audio</label><select id="v-audio"><option value="true">Generate audio</option><option value="false">Silent</option></select></div>
+      </div>
+      <label>First frame (image-to-video)</label>
+      <input type="file" id="v-first" accept="image/*"><input id="v-first-url" placeholder="…or image URL" style="width:100%;margin-top:4px">
+      <label>Last frame (optional)</label>
+      <input type="file" id="v-last" accept="image/*"><input id="v-last-url" placeholder="…or image URL" style="width:100%;margin-top:4px">
+      <label>Reference assets: images / video / audio (reference-to-video)</label>
+      <input type="file" id="v-refs" accept="image/*,video/*,audio/*" multiple>
+      <div class="row" style="margin-top:4px"><input id="v-ref-url" placeholder="URL (image/video/audio)"><select id="v-ref-type" style="max-width:90px"><option>image</option><option>video</option><option>audio</option></select><button class="sec" id="v-ref-add" style="flex:0">Add</button></div>
+      <div class="chips" id="v-ref-list"></div>
+      <div class="hint">Click a tag (image1, video1, audio1…) to insert @tag in the prompt. Tags follow upload order per type; I'm assuming Seedance maps them by that order, so write e.g. “the man from @image1 walks into the room from @image2”. Frame images override references. Video references bill cheaper on Seedance. Local files are sent as base64 data URLs; if a provider rejects them, use a public HTTPS URL.</div>
+      <div class="hint" id="v-est"></div>
+      <button id="v-go" style="width:100%;margin-top:14px">Generate video</button>
+    </div>
+
+    <!-- IMAGE -->
+    <div class="pane" id="p-image">
+      <label>Prompt</label><textarea id="i-prompt" placeholder="Describe the image, or how to edit the attached images"></textarea>
+      <div class="row">
+        <div><label>Aspect ratio</label><select id="i-ar"><option value="">default</option><option>1:1</option><option>16:9</option><option>9:16</option><option>4:3</option><option>3:4</option><option>3:2</option><option>2:3</option><option>21:9</option></select></div>
+        <div><label>Output</label><select id="i-mod"><option value="image,text">image + text</option><option value="image">image only</option></select></div>
+      </div>
+      <label>Reference images — click a tag to insert it in the prompt, then write e.g. “put the jacket from image2 on the man in image1”</label>
+      <input type="file" id="i-files" accept="image/*" multiple>
+      <div class="thumbs" id="i-ref-list"></div>
+
+      <label>Doodle editor (mark a region, then describe the change)</label>
+      <div class="row"><input type="file" id="e-file" accept="image/*"><button class="sec" id="e-close" style="flex:0">Close</button></div>
+      <div class="hint" id="e-hint">Load an image here, or press “Doodle / edit” on any generated image.</div>
+      <div id="e-wrap" style="display:none">
+        <div class="tools">
+          <input type="color" id="e-color" value="#ff2d2d" style="padding:2px;width:42px;flex:0">
+          <input type="range" id="e-size" min="4" max="120" value="36" title="Brush size">
+          <button class="sec" id="e-eraser" style="flex:0">Eraser</button>
+          <button class="sec" id="e-undo" style="flex:0">Undo</button>
+          <button class="sec" id="e-clear" style="flex:0">Clear</button>
+        </div>
+        <div class="canvas-box" id="e-box"><canvas id="e-base"></canvas><canvas id="e-paint"></canvas></div>
+        <div class="hint">With a doodle, the model gets the original (“base”) plus a marked copy, and is told to change only the marked region. In the prompt, describe just the change: “replace the red car with two bicycles”. Edits keep the loaded image's aspect ratio, so the aspect ratio setting is off while an image is loaded.</div>
+      </div>
+      <button id="i-go" style="width:100%;margin-top:14px">Generate image</button>
+    </div>
+
+    <!-- AUDIO -->
+    <div class="pane" id="p-audio">
+      <label>Text</label><textarea id="a-text" placeholder="Text to speak"></textarea>
+      <div class="row">
+        <div><label>Voice</label><input id="a-voice" value="alloy"></div>
+        <div><label>Format</label><select id="a-fmt"><option>mp3</option><option>pcm</option></select></div>
+        <div><label>Speed</label><input id="a-speed" type="number" step="0.1" value="1"></div>
+      </div>
+      <button id="a-go" style="width:100%;margin-top:14px">Generate speech</button>
+    </div>
+
+    <!-- CHAT -->
+    <div class="pane" id="p-chat">
+      <label>Message</label><textarea id="c-text" placeholder="Ask anything. Useful for writing video prompts."></textarea>
+      <label>Attach (image / audio / PDF)</label>
+      <input type="file" id="c-files" accept="image/*,audio/*,application/pdf" multiple>
+      <div class="row" style="margin-top:14px"><button id="c-go">Send</button><button class="sec" id="c-new" style="flex:0;white-space:nowrap">New chat</button></div>
+      <div class="hint" id="c-turns">New conversation</div>
+    </div>
+  </div>
+</section>
+<section><div class="out" id="out"></div></section>
+</main>
+
+<script>
+const API='https://openrouter.ai/api/v1';
+const $=id=>document.getElementById(id);
+let tab='video', videoModels=[], textModels={}, refs=[];
+const store={get:k=>{try{return localStorage.getItem(k)}catch{return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch{}},del:k=>{try{localStorage.removeItem(k)}catch{}}};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const errText=e=>!e?'':typeof e==='string'?e:(e.message||JSON.stringify(e));
+const textOf=x=>typeof x==='string'?x:Array.isArray(x)?x.map(p=>p.text||'').join(''):'';
+
+// ---------- key ----------
+const key=()=>$('key').value.trim();
+const H=(json=true)=>({Authorization:'Bearer '+key(),...(json?{'Content-Type':'application/json'}:{}),'X-Title':'OpenRouter Studio'});
+if(store.get('or_key')){$('key').value=store.get('or_key');$('remember').checked=true}
+$('connect').onclick=async()=>{
+  if(!key())return alert('Enter your API key');
+  if($('remember').checked)store.set('or_key',key());else store.del('or_key');
+  try{
+    const r=await fetch(API+'/credits',{headers:H(false)});
+    if(r.ok){const d=(await r.json()).data;$('credits').textContent=`Credits left: $${(d.total_credits-d.total_usage).toFixed(2)}`}
+    else $('credits').textContent=r.status===401?'Invalid key':'Connected (credits endpoint needs a management key)';
+  }catch(e){$('credits').textContent='Network error'}
+  loadModels();resumeJobs();
+};
+
+// ---------- tabs / models ----------
+$('tabs').onclick=e=>{const t=e.target.dataset.t;if(t)setTab(t)};
+function setTab(t){
+  tab=t;
+  [...$('tabs').children].forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on',p.id==='p-'+t));
+  loadModels();
+}
+const modelId=()=>$('modelCustom').value.trim()||$('model').value;
+
+// Model lists are fetched once per tab and cached; the chosen model is remembered per tab.
+let loadSeq=0;const lastModel={};
+async function loadModels(){
+  const seq=++loadSeq,t=tab,sel=$('model');
+  sel.innerHTML='';sel.onchange=null;$('modelInfo').textContent='';$('v-est').textContent='';
+  const opts={headers:key()?H(false):{}};
+  try{
+    let list;
+    if(t==='video'){
+      if(!videoModels.length){
+        const d=(await (await api('/videos/models',opts)).json()).data||[];
+        d.sort((a,b)=>(b.id.includes('seedance-2.5')-a.id.includes('seedance-2.5'))||a.id.localeCompare(b.id));
+        videoModels=d;
+      }
+      list=videoModels;
+    }else{
+      const q={image:'image',audio:'speech',chat:'text'}[t];
+      if(!textModels[q]?.length)textModels[q]=(await (await api('/models?output_modalities='+q,opts)).json()).data||[];
+      list=textModels[q];
+    }
+    if(seq!==loadSeq)return; // tab changed while this was loading
+    list.forEach(m=>sel.add(new Option(t==='video'&&m.name?`${m.name} (${m.id})`:m.id,m.id)));
+    if(lastModel[t]&&list.some(m=>m.id===lastModel[t]))sel.value=lastModel[t];
+    sel.onchange=()=>{lastModel[t]=sel.value;if(t==='video')applyVideoCaps()};
+    if(t==='video')applyVideoCaps();
+    else if(!list.length)$('modelInfo').textContent='No models listed – type a slug manually.';
+  }catch(e){if(seq===loadSeq)$('modelInfo').textContent='Could not load models: '+e.message+' (type a slug manually)'}
+}
+function fill(sel,arr,def){sel.innerHTML='';arr.forEach(v=>sel.add(new Option(v,v)));if(def&&arr.includes(def))sel.value=def}
+function applyVideoCaps(){
+  const m=videoModels.find(x=>x.id===$('model').value);if(!m)return;
+  fill($('v-dur'),m.supported_durations||[5,10],(m.supported_durations||[]).includes(8)?8:(m.supported_durations||[])[0]);
+  fill($('v-res'),m.supported_resolutions||['720p'],'720p');
+  fill($('v-ar'),m.supported_aspect_ratios||['16:9'],'16:9');
+  $('modelInfo').textContent=(m.description||'').slice(0,220);
+  estimate();
+}
+['v-dur','v-res'].forEach(i=>$(i).addEventListener('change',()=>estimate()));
+// Shows the model's full price list, one line per entry, with lines for the chosen resolution highlighted.
+const flat=(o,p='')=>Object.entries(o).flatMap(([k,v])=>v&&typeof v==='object'?flat(v,p+k+'.'):[[p+k,v]]);
+function estimate(){
+  const el=$('v-est');el.textContent='';
+  const m=videoModels.find(x=>x.id===$('model').value);
+  if(!m||!m.pricing_skus)return;
+  const res=($('v-res').value||'').toLowerCase(),rows=flat(m.pricing_skus);
+  const hits=res?rows.filter(([k])=>k.toLowerCase().includes(res)).length:0;
+  const h=document.createElement('div');h.textContent='Pricing'+(hits?` (${res} lines highlighted)`:'')+':';el.append(h);
+  rows.forEach(([k,v])=>{const d=document.createElement('div');d.textContent=`${k}: ${v}`;if(hits&&k.toLowerCase().includes(res))d.className='est-hit';el.append(d)});
+}
+
+// ---------- files ----------
+const toDataURL=f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)});
+async function imgSrc(fileEl,urlEl){const f=fileEl.files[0];return f?toDataURL(f):(urlEl.value.trim()||null)}
+function insertTag(id,txt){
+  const t=$(id),s=t.selectionStart??t.value.length;
+  t.value=t.value.slice(0,s)+txt+' '+t.value.slice(t.selectionEnd??s);t.focus();t.selectionStart=t.selectionEnd=s+txt.length+1;
+}
+// Video refs are tagged per kind by order: image1, image2, video1, audio1…
+function vTag(i){const k=refs[i].kind;return k+(refs.slice(0,i+1).filter(r=>r.kind===k).length)}
+function thumb(parent,src,kind,tag,onTag,onDel){
+  const d=document.createElement('div');d.className='thumb';
+  let m;
+  if(kind==='image'){m=document.createElement('img');m.src=src}
+  else{m=document.createElement('div');m.style.cssText='width:78px;height:78px;border-radius:8px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:12px';m.textContent=kind}
+  const t=document.createElement('span');t.className='tag';t.textContent=tag;t.title='Insert in prompt';t.onclick=onTag;
+  const x=document.createElement('span');x.className='x';x.textContent='×';x.onclick=onDel;
+  d.append(m,t,x);parent.append(d);
+}
+function renderRefs(){
+  $('v-ref-list').innerHTML='';$('v-ref-list').className='thumbs';
+  refs.forEach((r,i)=>thumb($('v-ref-list'),r.url,r.kind,vTag(i),()=>insertTag('v-prompt','@'+vTag(i)),()=>{refs.splice(i,1);renderRefs()}));
+}
+$('v-refs').onchange=async e=>{
+  for(const f of e.target.files){refs.push({kind:f.type.split('/')[0],label:f.name,url:await toDataURL(f)})}
+  e.target.value='';renderRefs();
+};
+$('v-ref-add').onclick=()=>{const u=$('v-ref-url').value.trim();if(!u)return;refs.push({kind:$('v-ref-type').value,label:u.slice(0,40),url:u});$('v-ref-url').value='';renderRefs()};
+
+// ---------- output cards ----------
+// All text from the API is inserted as text, never as HTML.
+// Each card tracks its blob URLs and releases them when the card is removed.
+function card(title){
+  const d=document.createElement('div');d.className='item';
+  d.innerHTML='<span class="close" title="Remove">×</span><div class="st"></div><div class="body"></div><div class="meta"></div>';
+  const st=d.querySelector('.st'),b=d.querySelector('.body'),mt=d.querySelector('.meta'),urls=[];
+  st.textContent=title;
+  const c={el:d,closed:false,busy:null,
+    status:(t,cls='')=>{st.textContent=t;st.className='st '+cls},
+    body:h=>{b.innerHTML='';if(typeof h==='string'){const p=document.createElement('div');p.className='meta';p.style.whiteSpace='pre-wrap';p.textContent=h;b.append(p)}else b.append(h)},
+    meta:t=>{mt.textContent=t},
+    blobURL:blob=>{const u=URL.createObjectURL(blob);urls.push(u);return u}};
+  d.querySelector('.close').onclick=()=>{
+    if(c.busy&&!confirm(c.busy))return;
+    c.closed=true;urls.forEach(u=>URL.revokeObjectURL(u));d.remove();
+  };
+  $('out').prepend(d);
+  return c;
+}
+async function api(path,opts){
+  const r=await fetch(API+path,opts);
+  if(!r.ok){let t=await r.text();try{t=JSON.parse(t).error?.message||t}catch{}throw new Error(`${r.status}: ${t}`)}
+  return r;
+}
+const need=()=>{if(!key()){alert('Enter your OpenRouter API key first');return false}return true};
+function dl(c,blob,name,label){const a=document.createElement('a');a.href=c.blobURL(blob);a.download=name;a.textContent=label;return a}
+
+// ---------- VIDEO ----------
+const jobs=()=>{try{return JSON.parse(store.get('or_jobs')||'[]')}catch{return[]}};
+const setJobs=j=>store.set('or_jobs',JSON.stringify(j.slice(-30)));
+const active=new Set(); // job ids being polled right now, so a job is never polled twice
+$('v-go').onclick=async()=>{
+  if(!need())return;
+  const body={model:modelId(),prompt:$('v-prompt').value.trim(),
+    duration:+$('v-dur').value,resolution:$('v-res').value,aspect_ratio:$('v-ar').value,
+    generate_audio:$('v-audio').value==='true'};
+  if(!body.prompt&&!$('v-first').files[0]&&!$('v-first-url').value)return alert('Prompt required');
+  if(!body.prompt)delete body.prompt;
+  if($('v-seed').value)body.seed=+$('v-seed').value;
+  const fr=[],f1=await imgSrc($('v-first'),$('v-first-url')),f2=await imgSrc($('v-last'),$('v-last-url'));
+  if(f1)fr.push({type:'image_url',image_url:{url:f1},frame_type:'first_frame'});
+  if(f2)fr.push({type:'image_url',image_url:{url:f2},frame_type:'last_frame'});
+  if(fr.length)body.frame_images=fr;
+  else if(refs.length)body.input_references=refs.map(r=>r.kind==='image'?{type:'image_url',image_url:{url:r.url}}:r.kind==='video'?{type:'video_url',video_url:{url:r.url}}:{type:'audio_url',audio_url:{url:r.url}});
+  const c=card('Submitting…');c.meta(`${body.model} · ${body.duration}s · ${body.resolution} · ${body.aspect_ratio}`);
+  try{
+    const job=await (await api('/videos',{method:'POST',headers:H(),body:JSON.stringify(body)})).json();
+    setJobs([...jobs(),{id:job.id,polling_url:job.polling_url,model:body.model,t:Date.now()}]);
+    pollJob(job,c);
+  }catch(e){c.status('Error','err');c.body(e.message)}
+};
+async function pollJob(job,c){
+  if(active.has(job.id))return;
+  active.add(job.id);
+  c.busy='This video is still generating and will still be billed. Stop tracking it here?';
+  try{
+    let cur=job;const t0=Date.now();
+    while(['pending','in_progress'].includes(cur.status)){
+      c.status(`${cur.status} · ${Math.round((Date.now()-t0)/1000)}s`);
+      await sleep(10000);
+      if(c.closed){setJobs(jobs().filter(j=>j.id!==job.id));return}
+      try{cur=await (await api('/videos/'+cur.id,{headers:H(false)})).json()}
+      catch(e){c.meta('Poll retry: '+e.message)}   // transient: keep same job, never resubmit
+      if(Date.now()-t0>3600e3){c.status('Timed out','err');c.meta(`Job ${job.id} is still saved; press Connect later to resume it.`);return}
+    }
+    setJobs(jobs().filter(j=>j.id!==job.id));
+    c.busy=null;
+    if(cur.status!=='completed'){c.status(cur.status||'failed','err');c.meta(errText(cur.error));return}
+    c.status('Completed','ok');
+    const notes=[];
+    try{
+      const r=await api(`/videos/${cur.id}/content?index=0`,{headers:H(false)});
+      const blob=await r.blob(),v=document.createElement('video');
+      v.src=c.blobURL(blob);v.controls=true;v.loop=true;v.playsInline=true;
+      const wrap=document.createElement('div');wrap.append(v);
+      const links=document.createElement('div');links.className='links';
+      links.append(dl(c,blob,`video-${cur.id}.mp4`,'Download MP4'));wrap.append(links);
+      c.body(wrap);
+    }catch(e){notes.push('Download failed: '+e.message)}
+    if(cur.usage?.cost!=null)notes.push(`Cost: $${cur.usage.cost}`);
+    notes.push(`job ${cur.id}`);
+    c.meta(notes.join(' · '));
+  }finally{active.delete(job.id);c.busy=null}
+}
+function resumeJobs(){
+  jobs().filter(j=>!active.has(j.id)).forEach(j=>{const c=card('Resuming job…');c.meta(`${j.model} · ${j.id}`);pollJob({id:j.id,status:'pending'},c)});
+}
+
+// ---------- IMAGE ----------
+// reference tray (tags: image1, image2…)
+let irefs=[];
+function renderIRefs(){
+  $('i-ref-list').innerHTML='';
+  irefs.forEach((r,i)=>thumb($('i-ref-list'),r.url,'image','image'+(i+1),()=>insertTag('i-prompt','image'+(i+1)),()=>{irefs.splice(i,1);renderIRefs()}));
+}
+$('i-files').onchange=async e=>{for(const f of e.target.files)irefs.push({url:await toDataURL(f)});e.target.value='';renderIRefs()};
+
+// doodle editor
+const E={loaded:false,w:0,h:0,hist:[],drawing:false,eraser:false,last:null};
+const bc=$('e-base'),pc=$('e-paint'),pctx=pc.getContext('2d',{willReadFrequently:true});
+function setEditorAR(on){$('i-ar').disabled=on;$('i-ar').title=on?'Edits keep the loaded image\'s aspect ratio':''}
+function loadEditor(url){
+  const img=new Image();
+  img.onload=()=>{
+    const s=Math.min(1,1536/Math.max(img.width,img.height));
+    E.w=Math.round(img.width*s);E.h=Math.round(img.height*s);
+    bc.width=pc.width=E.w;bc.height=pc.height=E.h;
+    bc.getContext('2d').drawImage(img,0,0,E.w,E.h);
+    pctx.clearRect(0,0,E.w,E.h);E.hist=[];E.loaded=true;setEditorAR(true);
+    $('e-wrap').style.display='block';$('e-hint').textContent=`Editing ${E.w}×${E.h}. Paint over the area to change.`;
+  };
+  img.src=url;
+}
+$('e-file').onchange=async e=>{if(e.target.files[0])loadEditor(await toDataURL(e.target.files[0]));e.target.value=''};
+$('e-close').onclick=()=>{E.loaded=false;setEditorAR(false);$('e-wrap').style.display='none';$('e-hint').textContent='Load an image here, or press “Doodle / edit” on any generated image.'};
+$('e-eraser').onclick=()=>{E.eraser=!E.eraser;$('e-eraser').style.background=E.eraser?'var(--ac)':''};
+$('e-undo').onclick=()=>{const h=E.hist.pop();if(h)pctx.putImageData(h,0,0)};
+$('e-clear').onclick=()=>{E.hist.push(pctx.getImageData(0,0,E.w,E.h));pctx.clearRect(0,0,E.w,E.h)};
+function pos(ev){const r=pc.getBoundingClientRect();return{x:(ev.clientX-r.left)*E.w/r.width,y:(ev.clientY-r.top)*E.h/r.height}}
+function stroke(a,b){
+  pctx.globalCompositeOperation=E.eraser?'destination-out':'source-over';
+  pctx.strokeStyle=pctx.fillStyle=$('e-color').value;
+  pctx.lineWidth=+$('e-size').value*E.w/pc.getBoundingClientRect().width;
+  pctx.lineCap=pctx.lineJoin='round';
+  pctx.beginPath();pctx.moveTo(a.x,a.y);pctx.lineTo(b.x,b.y);pctx.stroke();
+}
+pc.onpointerdown=ev=>{
+  ev.preventDefault();pc.setPointerCapture(ev.pointerId);
+  E.hist.push(pctx.getImageData(0,0,E.w,E.h));if(E.hist.length>25)E.hist.shift();
+  E.drawing=true;E.last=pos(ev);stroke(E.last,E.last);
+};
+pc.onpointermove=ev=>{if(!E.drawing)return;const p=pos(ev);stroke(E.last,p);E.last=p};
+pc.onpointerup=pc.onpointercancel=()=>{E.drawing=false};
+function hasStrokes(){const d=pctx.getImageData(0,0,E.w,E.h).data;for(let i=3;i<d.length;i+=4)if(d[i]>0)return true;return false}
+function exportEditor(){
+  const base=bc.toDataURL('image/png');
+  if(!hasStrokes())return{base,marked:null};
+  const c=document.createElement('canvas');c.width=E.w;c.height=E.h;const x=c.getContext('2d');
+  x.drawImage(bc,0,0);x.globalAlpha=.55;x.drawImage(pc,0,0);
+  return{base,marked:c.toDataURL('image/png')};
+}
+
+$('i-go').onclick=async()=>{
+  if(!need())return;
+  const userPrompt=$('i-prompt').value.trim();
+  if(!userPrompt)return alert('Write a prompt');
+  const content=[];let prompt=userPrompt,edit=false;
+  if(E.loaded){
+    const {base,marked}=exportEditor();
+    content.push({type:'text',text:'base (the original image):'},{type:'image_url',image_url:{url:base}});
+    if(marked){
+      edit=true;
+      content.push({type:'text',text:'marked (the same image with a translucent colored doodle over the region to change):'},{type:'image_url',image_url:{url:marked}});
+      prompt=`Image edit task. "base" is the original image; "marked" shows the region to change, painted over with a colored doodle. `+
+        `Apply this change ONLY inside the doodled region: ${userPrompt}\n`+
+        `Everything outside the doodled region must stay exactly identical to "base" (composition, lighting, colors, style, resolution, aspect ratio). `+
+        `Do not include the doodle or any color overlay in the output.`;
+    }else prompt=`"base" is the input image. ${userPrompt}`;
+  }
+  irefs.forEach((r,i)=>content.push({type:'text',text:`image${i+1}:`},{type:'image_url',image_url:{url:r.url}}));
+  if(irefs.length)prompt+=`\nReference images are labeled image1…image${irefs.length}; names in the instructions refer to those labels.`;
+  content.push({type:'text',text:prompt});
+  const body={model:modelId(),messages:[{role:'user',content}],modalities:$('i-mod').value.split(',')};
+  if($('i-ar').value&&!E.loaded)body.image_config={aspect_ratio:$('i-ar').value};
+  const c=card(edit?'Editing doodled region…':'Generating image…');c.meta(body.model);
+  try{
+    const d=await (await api('/chat/completions',{method:'POST',headers:H(),body:JSON.stringify(body)})).json();
+    const msg=d.choices?.[0]?.message;if(!msg)throw new Error(errText(d.error)||'Empty response');
+    const imgs=msg.images||[],txt=textOf(msg.content);
+    if(!imgs.length){c.status('No image returned','err');c.body(txt);return}
+    const w=document.createElement('div');
+    imgs.forEach((im,i)=>{
+      const u=im.image_url.url,e=document.createElement('img');e.src=u;w.append(e);
+      const acts=document.createElement('div');acts.className='acts';
+      const btn=(t,f)=>{const b=document.createElement('button');b.className='sec';b.textContent=t;b.onclick=f;acts.append(b)};
+      const a=document.createElement('a');a.href=u;a.download=`image-${Date.now()}-${i}.png`;a.textContent='Download';a.style.alignSelf='center';acts.append(a);
+      btn('Doodle / edit',()=>{setTab('image');loadEditor(u);window.scrollTo({top:0,behavior:'smooth'})});
+      btn('+ image ref',()=>{irefs.push({url:u});setTab('image');renderIRefs()});
+      btn('+ video ref',()=>{refs.push({kind:'image',label:'generated',url:u});renderRefs();setTab('video')});
+      w.append(acts);
+    });
+    c.status('Done','ok');c.body(w);c.meta(txt);
+  }catch(e){c.status('Error','err');c.meta(e.message)}
+};
+
+// ---------- AUDIO (TTS) ----------
+// Raw PCM gets a WAV header so the browser can play it (assumes 24 kHz, 16-bit, mono).
+function pcmToWav(buf,rate=24000){
+  const n=buf.byteLength,h=new ArrayBuffer(44),v=new DataView(h);
+  const w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
+  w(0,'RIFF');v.setUint32(4,36+n,true);w(8,'WAVE');w(12,'fmt ');
+  v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+  v.setUint32(24,rate,true);v.setUint32(28,rate*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);
+  w(36,'data');v.setUint32(40,n,true);
+  return new Blob([h,buf],{type:'audio/wav'});
+}
+$('a-go').onclick=async()=>{
+  if(!need())return;
+  const fmt=$('a-fmt').value;
+  const body={model:modelId(),input:$('a-text').value,voice:$('a-voice').value,response_format:fmt,speed:+$('a-speed').value};
+  if(!body.input.trim())return alert('Enter text to speak');
+  const c=card('Generating speech…');c.meta(body.model);
+  try{
+    const blob=await (await api('/audio/speech',{method:'POST',headers:H(),body:JSON.stringify(body)})).blob();
+    const play=fmt==='pcm'?pcmToWav(await blob.arrayBuffer()):blob;
+    const w=document.createElement('div');
+    const a=document.createElement('audio');a.controls=true;a.src=c.blobURL(play);w.append(a);
+    const links=document.createElement('div');links.className='links';
+    links.append(dl(c,blob,`speech-${Date.now()}.${fmt}`,'Download '+fmt.toUpperCase()));
+    if(fmt==='pcm')links.append(dl(c,play,`speech-${Date.now()}.wav`,'Download WAV'));
+    w.append(links);
+    c.status('Done','ok');c.body(w);
+    if(fmt==='pcm')c.meta(body.model+' · PCM played as 24 kHz 16-bit mono');
+  }catch(e){c.status('Error','err');c.meta(e.message)}
+};
+
+// ---------- CHAT ----------
+// Earlier turns are sent with each message until "New chat" is pressed.
+let chatHist=[];
+function updChat(){const n=chatHist.length/2;$('c-turns').textContent=n?`Continuing conversation · ${n} earlier exchange${n>1?'s':''} sent as context`:'New conversation'}
+$('c-new').onclick=()=>{chatHist=[];updChat()};
+$('c-go').onclick=async()=>{
+  if(!need())return;
+  const text=$('c-text').value.trim(),files=[...$('c-files').files];
+  if(!text&&!files.length)return alert('Write a message');
+  const content=[];if(text)content.push({type:'text',text});
+  for(const f of files){
+    const u=await toDataURL(f);
+    if(f.type.startsWith('image/'))content.push({type:'image_url',image_url:{url:u}});
+    else if(f.type.startsWith('audio/'))content.push({type:'input_audio',input_audio:{data:u.split(',')[1],format:f.name.split('.').pop().toLowerCase()}});
+    else content.push({type:'file',file:{filename:f.name,file_data:u}});
+  }
+  const model=modelId(),userMsg={role:'user',content};
+  const c=card('Thinking…');c.meta(`${model} · You: ${text.slice(0,120)||files.map(f=>f.name).join(', ')}`);
+  $('c-go').disabled=true;
+  try{
+    const d=await (await api('/chat/completions',{method:'POST',headers:H(),body:JSON.stringify({model,messages:[...chatHist,userMsg]})})).json();
+    const msg=d.choices?.[0]?.message;if(!msg)throw new Error(errText(d.error)||'Empty response');
+    const reply=textOf(msg.content);
+    chatHist.push(userMsg,{role:'assistant',content:reply});updChat();
+    $('c-text').value='';$('c-files').value='';
+    const p=document.createElement('div');p.style.whiteSpace='pre-wrap';p.textContent=reply;
+    c.status('Reply','ok');c.body(p);
+  }catch(e){c.status('Error','err');c.meta(e.message)}
+  finally{$('c-go').disabled=false}
+};
+
+loadModels();
+if(key())$('connect').click();
+</script>
+</body>
+</html>
